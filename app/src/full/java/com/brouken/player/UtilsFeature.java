@@ -3,6 +3,7 @@ package com.brouken.player;
 import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 
@@ -108,7 +109,7 @@ public class UtilsFeature {
         return mediaInformationSession.getMediaInformation();
     }
 
-    public static boolean switchFrameRate(final PlayerActivity activity, final Uri uri, final boolean play) {
+    public static boolean switchFrameRate(final PlayerActivity activity, final Uri uri, final boolean play, final boolean tvQuickActionsAFR) {
         // preferredDisplayModeId only available on SDK 23+
         // ExoPlayer already uses Surface.setFrameRate() on Android 11+
         if (Build.VERSION.SDK_INT >= 23) {
@@ -137,7 +138,15 @@ public class UtilsFeature {
                         }
                     }
                 }
-                Utils.handleFrameRate(activity, frameRate, play);
+                if (!tvQuickActionsAFR) {
+                    Utils.handleFrameRate(activity, frameRate, play);
+                } else {
+                    Intent intent = new Intent();
+                    intent.setPackage("dev.vodik7.tvquickactions");
+                    intent.setAction("dev.vodik7.tvquickactions.START_AFR");
+                    intent.putExtra("fps", frameRate);
+                    activity.sendBroadcast(intent);
+                }
             });
             activity.frameRateSwitchThread.start();
             return true;
