@@ -95,6 +95,7 @@ import androidx.media3.ui.PlayerControlView;
 import androidx.media3.ui.PlayerView;
 import androidx.media3.ui.SubtitleView;
 import androidx.media3.ui.TimeBar;
+import androidx.media3.ui.TrackSelectionDialogBuilder;
 
 import com.brouken.player.dtpv.DoubleTapPlayerView;
 import com.brouken.player.dtpv.youtube.YouTubeOverlay;
@@ -158,6 +159,7 @@ public class PlayerActivity extends Activity {
     private CoordinatorLayout coordinatorLayout;
     private TextView titleView;
     private ImageButton buttonOpen;
+    private ImageButton buttonVidTracks;
     private ImageButton buttonPiP;
     private ImageButton buttonAspectRatio;
     private ImageButton buttonRotation;
@@ -402,6 +404,17 @@ public class PlayerActivity extends Activity {
             return true;
         });
 
+        buttonVidTracks = new ImageButton(this, null, 0, R.style.ExoStyledControls_Button_Bottom);
+        buttonVidTracks.setImageResource(R.drawable.ic_tune_24dp);
+        buttonVidTracks.setId(View.generateViewId());
+        buttonVidTracks.setContentDescription("Video track");
+        buttonVidTracks.setOnClickListener(view -> {
+            new TrackSelectionDialogBuilder(this, "", player, C.TRACK_TYPE_VIDEO)
+                .setShowDisableOption(false)
+                .build()
+                .show();
+        });
+
         if (Utils.isPiPSupported(this)) {
             // TODO: Android 12 improvements:
             // https://developer.android.com/about/versions/12/features/pip-improvements
@@ -613,6 +626,7 @@ public class PlayerActivity extends Activity {
         if (!isTvBox) {
             controls.addView(buttonRotation);
         }
+        controls.addView(buttonVidTracks);
         controls.addView(exoSettings);
 
         exoBasicControls.addView(horizontalScrollView);
@@ -2229,6 +2243,7 @@ public class PlayerActivity extends Activity {
         } else {
             Utils.setButtonEnabled(this, exoSettings, enable);
         }
+        Utils.setButtonEnabled(this, buttonVidTracks, enable);
     }
 
     private void scaleStart() {
