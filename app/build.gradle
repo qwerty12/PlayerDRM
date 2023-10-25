@@ -1,5 +1,6 @@
 plugins {
     id 'com.android.application'
+    id 'org.jetbrains.kotlin.android' version '1.8.10'
 }
 
 android {
@@ -68,6 +69,10 @@ android {
         disable 'MissingTranslation'
         disable 'UnsafeOptInUsageError'
     }
+
+    composeOptions {
+        kotlinCompilerExtensionVersion = "1.4.3"
+    }
 }
 
 dependencies {
@@ -102,4 +107,6 @@ dependencies {
     implementation project(path: ':doubletapplayerview')
     implementation project(path: ':android-file-chooser')
     implementation fileTree(dir: "libs", include: ["lib-*.aar"])
+    implementation "androidx.media3:media3-datasource-cronet:$media3_version"
+    implementation 'org.chromium.net:cronet-embedded:113.5672.61'
 }
