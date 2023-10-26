@@ -681,6 +681,30 @@ class Utils {
         return context.getResources().getConfiguration().smallestScreenWidthDp >= 720;
     }
 
+    public static byte[] b16decode(String encoded) {
+        if (encoded == null) {
+            throw new NullPointerException("Input string cannot be null");
+        }
+
+        int length = encoded.length();
+
+        if (length == 0) {
+            throw new IllegalArgumentException("Input string is empty");
+        }
+
+        if (length % 2 != 0) {
+            throw new IllegalArgumentException("Input string must have an even number of characters");
+        }
+
+        byte[] decodedBytes = new byte[length / 2];
+        for (int i = 0; i < length; i += 2) {
+            int high = Character.digit(encoded.charAt(i), 16);
+            int low = Character.digit(encoded.charAt(i + 1), 16);
+            decodedBytes[i / 2] = (byte) ((high << 4) + low);
+        }
+        return decodedBytes;
+    }
+
     public static <K, V> void orderByValue(LinkedHashMap<K, V> m, final Comparator<? super V> c) {
         List<Map.Entry<K, V>> entries = new ArrayList<>(m.entrySet());
         Collections.sort(entries, (lhs, rhs) -> c.compare(lhs.getValue(), rhs.getValue()));

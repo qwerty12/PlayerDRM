@@ -2,6 +2,8 @@ package com.brouken.player;
 
 import static android.content.pm.PackageManager.FEATURE_EXPANDED_PICTURE_IN_PICTURE;
 
+import static com.brouken.player.Utils.b16decode;
+
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
@@ -83,6 +85,9 @@ import androidx.media3.exoplayer.ExoPlaybackException;
 import androidx.media3.exoplayer.ExoPlayer;
 import androidx.media3.exoplayer.RenderersFactory;
 import androidx.media3.exoplayer.SeekParameters;
+import androidx.media3.exoplayer.drm.DefaultDrmSessionManager;
+import androidx.media3.exoplayer.drm.FrameworkMediaDrm;
+import androidx.media3.exoplayer.drm.LocalMediaDrmCallback;
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory;
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.extractor.DefaultExtractorsFactory;
@@ -105,6 +110,8 @@ import com.getkeepsafe.taptargetview.TapTargetView;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.chromium.net.CronetEngine;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -113,6 +120,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -207,10 +215,12 @@ public class PlayerActivity extends Activity {
     static final String API_SUBS_NAME = "subs.name";
     static final String API_TITLE = "title";
     static final String API_END_BY = "end_by";
+    static final String API_CENC_DECRYPTION_KEYS = "cenc_decryption_keys";
     boolean apiAccess;
     boolean apiAccessPartial;
     String apiTitle;
     List<MediaItem.SubtitleConfiguration> apiSubs = new ArrayList<>();
+    Map<String, String> apiCencDecryptionKeys = new HashMap<>();
     boolean intentReturnResult;
     boolean playbackFinished;
 
@@ -281,7 +291,8 @@ public class PlayerActivity extends Activity {
                 Bundle bundle = launchIntent.getExtras();
                 if (bundle != null) {
                     apiAccess = bundle.containsKey(API_POSITION) || bundle.containsKey(API_RETURN_RESULT)
-                            || bundle.containsKey(API_SUBS) || bundle.containsKey(API_SUBS_ENABLE);
+                            || bundle.containsKey(API_SUBS) || bundle.containsKey(API_SUBS_ENABLE)
+                            || bundle.containsKey(API_CENC_DECRYPTION_KEYS);
                     if (apiAccess) {
                         mPrefs.setPersistent(false);
                     } else if (bundle.containsKey(API_TITLE)) {
@@ -309,6 +320,20 @@ public class PlayerActivity extends Activity {
                                 name = subsName[i];
                             }
                             apiSubs.add(SubtitleUtils.buildSubtitle(this, sub, name, sub.equals(defaultSub)));
+                        }
+                    }
+
+                    String[] cenc_keys = bundle.getStringArray(API_CENC_DECRYPTION_KEYS);
+                    if (cenc_keys != null && cenc_keys.length > 0) {
+                        for (String cenc_key : cenc_keys) {
+                            if (cenc_key != null && !cenc_key.trim().isEmpty()) {
+                                String[] key_parts = cenc_key.split(":");
+                                if (key_parts.length == 2) {
+                                    String kid = key_parts[0].trim();
+                                    String key = key_parts[1].trim();
+                                    apiCencDecryptionKeys.put(kid, key);
+                                }
+                            }
                         }
                     }
                 }
@@ -1063,6 +1088,7 @@ public class PlayerActivity extends Activity {
         apiAccessPartial = false;
         apiTitle = null;
         apiSubs.clear();
+        apiCencDecryptionKeys.clear();
         mPrefs.setPersistent(true);
     }
 
@@ -1228,9 +1254,40 @@ public class PlayerActivity extends Activity {
         DefaultDataSource.Factory defaultDataSourceFactory = new DefaultDataSource.Factory(
                         this, cronetDataSourceFactory);
 
+        DefaultMediaSourceFactory defaultMediaSourceFactory = new DefaultMediaSourceFactory(
+                defaultDataSourceFactory, extractorsFactory);
+
         ExoPlayer.Builder playerBuilder = new ExoPlayer.Builder(this, renderersFactory)
                 .setTrackSelector(trackSelector)
-                .setMediaSourceFactory(new DefaultMediaSourceFactory(defaultDataSourceFactory, extractorsFactory));
+                .setMediaSourceFactory(defaultMediaSourceFactory);
+
+        if (!apiCencDecryptionKeys.isEmpty()) {
+            try {
+                JSONObject rootObject = new JSONObject();
+                JSONArray keysArray = new JSONArray();
+
+                for (Map.Entry<String, String> cencKey : apiCencDecryptionKeys.entrySet()) {
+                    JSONObject keyObject = new JSONObject();
+                    keyObject.put("kty", "oct");
+                    keyObject.put("k", Base64.encodeToString(b16decode(cencKey.getValue()), Base64.NO_PADDING | Base64.NO_WRAP | Base64.URL_SAFE));
+                    keyObject.put("kid", Base64.encodeToString(b16decode(cencKey.getKey()), Base64.NO_PADDING | Base64.NO_WRAP | Base64.URL_SAFE));
+                    keysArray.put(keyObject);
+                }
+
+                rootObject.put("keys", keysArray);
+                rootObject.put("type", "temporary");
+
+                String jsonString = rootObject.toString();
+
+                LocalMediaDrmCallback drmCallback = new LocalMediaDrmCallback(jsonString.getBytes());
+                DefaultDrmSessionManager defaultDrmSessionManager = new DefaultDrmSessionManager.Builder()
+                        .setUuidAndExoMediaDrmProvider(C.CLEARKEY_UUID, FrameworkMediaDrm.DEFAULT_PROVIDER)
+                        .build(drmCallback);
+                defaultMediaSourceFactory.setDrmSessionManagerProvider(_mediaItem -> defaultDrmSessionManager);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         if (haveMedia && isNetworkUri) {
             if (mPrefs.mediaUri.getScheme().toLowerCase().startsWith("http")) {
