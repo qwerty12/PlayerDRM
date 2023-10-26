@@ -338,7 +338,7 @@ public class PlayerActivity extends Activity {
                     }
                 }
 
-                if (apiSubs.isEmpty()) {
+                if (apiSubs.isEmpty() && apiCencDecryptionKeys.isEmpty()) {
                     searchSubtitles();
                 }
 
