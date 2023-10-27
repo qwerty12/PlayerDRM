@@ -127,6 +127,7 @@ public class UtilsFeature {
                     });
                     return;
                 }
+                int height = 0;
                 List<StreamInformation> streamInformations = mediaInformation.getStreams();
                 for (StreamInformation streamInformation : streamInformations) {
                     if (streamInformation.getType().equals("video")) {
@@ -134,6 +135,7 @@ public class UtilsFeature {
                         if (averageFrameRate.contains("/")) {
                             String[] vals = averageFrameRate.split("/");
                             frameRate = Float.parseFloat(vals[0]) / Float.parseFloat(vals[1]);
+                            height = streamInformation.getHeight().intValue();
                             break;
                         }
                     }
@@ -145,6 +147,8 @@ public class UtilsFeature {
                     intent.setPackage("dev.vodik7.tvquickactions");
                     intent.setAction("dev.vodik7.tvquickactions.START_AFR");
                     intent.putExtra("fps", frameRate);
+                    if (height > 0)
+                        intent.putExtra("height", height);
                     activity.sendBroadcast(intent);
                 }
             });
