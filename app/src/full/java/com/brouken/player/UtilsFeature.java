@@ -141,7 +141,7 @@ public class UtilsFeature {
                     }
                 }
                 if (!tvQuickActionsAFR) {
-                    Utils.handleFrameRate(activity, frameRate, play);
+                Utils.handleFrameRate(activity, frameRate, play);
                 } else {
                     Intent intent = new Intent();
                     intent.setPackage("dev.vodik7.tvquickactions");

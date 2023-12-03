@@ -213,9 +213,9 @@ public class PlayerActivity extends Activity {
     static final String API_SUBS = "subs";
     static final String API_SUBS_ENABLE = "subs.enable";
     static final String API_SUBS_NAME = "subs.name";
+    static final String API_CENC_DECRYPTION_KEYS = "cenc_decryption_keys";
     static final String API_TITLE = "title";
     static final String API_END_BY = "end_by";
-    static final String API_CENC_DECRYPTION_KEYS = "cenc_decryption_keys";
     boolean apiAccess;
     boolean apiAccessPartial;
     String apiTitle;
@@ -324,7 +324,7 @@ public class PlayerActivity extends Activity {
                     }
 
                     String[] cenc_keys = bundle.getStringArray(API_CENC_DECRYPTION_KEYS);
-                    if (cenc_keys != null && cenc_keys.length > 0) {
+                    if (cenc_keys != null && cenc_keys.length > 0 && cenc_keys.length <= 15) {
                         for (String cenc_key : cenc_keys) {
                             if (cenc_key != null && !cenc_key.trim().isEmpty()) {
                                 String[] key_parts = cenc_key.split(":");
